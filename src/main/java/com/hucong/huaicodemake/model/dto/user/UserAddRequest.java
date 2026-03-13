@@ -1,4 +1,4 @@
-package com.hucong.huaicodemake.model.dto;
+package com.hucong.huaicodemake.model.dto.user;
 
 import lombok.Data;
 

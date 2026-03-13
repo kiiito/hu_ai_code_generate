@@ -1,6 +1,6 @@
 package com.hucong.huaicodemake.service;
 
-import com.hucong.huaicodemake.model.dto.UserQueryRequest;
+import com.hucong.huaicodemake.model.dto.user.UserQueryRequest;
 import com.hucong.huaicodemake.model.vo.LoginUserVO;
 import com.hucong.huaicodemake.model.vo.UserVO;
 import com.mybatisflex.core.query.QueryWrapper;

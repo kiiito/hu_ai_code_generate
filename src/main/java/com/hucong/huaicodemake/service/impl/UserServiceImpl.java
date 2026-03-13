@@ -6,7 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import com.hucong.huaicodemake.exception.BusinessException;
 import com.hucong.huaicodemake.exception.ErrorCode;
 import com.hucong.huaicodemake.exception.ThrowUtils;
-import com.hucong.huaicodemake.model.dto.UserQueryRequest;
+import com.hucong.huaicodemake.model.dto.user.UserQueryRequest;
 import com.hucong.huaicodemake.model.enums.UserRoleEnum;
 import com.hucong.huaicodemake.model.vo.LoginUserVO;
 import com.hucong.huaicodemake.model.vo.UserVO;
