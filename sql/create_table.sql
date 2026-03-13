@@ -37,7 +37,7 @@ create table app
     appName      varchar(256)                       null comment '应用名称',
     cover        varchar(512)                       null comment '应用封面',
     initPrompt   text                               null comment '应用初始化的 prompt',
-    codeGenTDRJJoCuZQr7AeKRYoWjFwqL8AEBXsKNRa  varchar(64)                        null comment '代码生成类型（枚举）',
+    codeGenType  varchar(64)                        null comment '代码生成类型（枚举）',
     deployKey    varchar(64)                        null comment '部署标识',
     deployedTime datetime                           null comment '部署时间',
     priority     int      default 0                 not null comment '优先级',
@@ -50,3 +50,4 @@ create table app
     INDEX idx_appName (appName),         -- 提升基于应用名称的查询性能
     INDEX idx_userId (userId)            -- 提升基于用户 ID 的查询性能
 ) comment '应用' collate = utf8mb4_unicode_ci;
+

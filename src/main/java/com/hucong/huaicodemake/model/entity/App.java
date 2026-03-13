@@ -56,8 +56,8 @@ public class App implements Serializable {
     /**
      * 代码生成类型（枚举）
      */
-    @Column("codeGenTDRJJoCuZQr7AeKRYoWjFwqL8AEBXsKNRa")
-    private String codeGenTDRJJoCuZQr7AeKRYoWjFwqL8AEBXsKNRa;
+    @Column("codeGenType")
+    private String codeGenType;
 
     /**
      * 部署标识
