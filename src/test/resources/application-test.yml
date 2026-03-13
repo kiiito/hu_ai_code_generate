@@ -1,0 +1,20 @@
+# 测试环境配置
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3307/hu_ai_code_make
+    username: root
+    password: 1234
+
+# AI 配置 - 测试环境使用与 local 相同的配置
+langchain4j:
+  open-ai:
+    chat-model:
+      base-url: https://api.deepseek.com
+      api-key: sk-d20805cd227b4935b5416777548b0008
+      model-name: deepseek-chat
+      log-requests: true
+      log-responses: true
+      max-tokens: 8192
+      strict-json-schema: true
+      response-format: json_object

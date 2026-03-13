@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: hu-ai-code-make-backend
+  profiles:
+    active: local
+  # mysql
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3307/hu_ai_code_make
+    username: root
+    password: 1234
+server:
+  port: 8124
+  servlet:
+    context-path: /api
+# springdoc-openapi
+springdoc:
+  group-configs:
+    - group: 'default'
+      paths-to-match: '/**'
+      packages-to-scan: com.hucong.huaicodemake.controller
+# knife4j
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
