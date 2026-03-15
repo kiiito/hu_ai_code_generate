@@ -2,6 +2,7 @@ package com.hucong.huaicodemake.controller;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.hucong.huaicodemake.annotation.AuthCheck;
 import com.hucong.huaicodemake.common.BaseResponse;
 import com.hucong.huaicodemake.common.DeleteRequest;
@@ -11,10 +12,7 @@ import com.hucong.huaicodemake.constant.UserConstant;
 import com.hucong.huaicodemake.exception.BusinessException;
 import com.hucong.huaicodemake.exception.ErrorCode;
 import com.hucong.huaicodemake.exception.ThrowUtils;
-import com.hucong.huaicodemake.model.dto.app.AppAddRequest;
-import com.hucong.huaicodemake.model.dto.app.AppAdminUpdateRequest;
-import com.hucong.huaicodemake.model.dto.app.AppQueryRequest;
-import com.hucong.huaicodemake.model.dto.app.AppUpdateRequest;
+import com.hucong.huaicodemake.model.dto.app.*;
 import com.hucong.huaicodemake.model.entity.App;
 import com.hucong.huaicodemake.model.entity.User;
 import com.hucong.huaicodemake.model.enums.CodeGenTypeEnum;
@@ -25,10 +23,15 @@ import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 应用 控制层。
@@ -43,6 +46,81 @@ public class AppController {
     private AppService appService;
     @Resource
     private UserService userService;
+
+
+    /**
+     * 应用部署
+     *
+     * @param appDeployRequest 部署请求
+     * @param request          请求
+     * @return 部署 URL
+     */
+    @PostMapping("/deploy")
+    public BaseResponse<String> deployApp(@RequestBody AppDeployRequest appDeployRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(appDeployRequest == null, ErrorCode.PARAMS_ERROR);
+        Long appId = appDeployRequest.getAppId();
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用 ID 不能为空");
+        // 获取当前登录用户
+        User loginUser = userService.getLoginUser(request);
+        // 调用服务部署应用
+        String deployUrl = appService.deployApp(appId, loginUser);
+        return ResultUtils.success(deployUrl);
+    }
+
+
+    /**
+     * 应用聊天生成代码（流式 SSE）
+     *
+     * @param appId   应用 ID
+     * @param message 用户消息
+     * @param request 请求对象
+     * @return 生成结果流
+     */
+    @GetMapping(value = "/chat/gen/code", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId,
+                                                       @RequestParam String message,
+                                                       HttpServletRequest request) {
+        // 参数校验
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用ID无效");
+        ThrowUtils.throwIf(StrUtil.isBlank(message), ErrorCode.PARAMS_ERROR, "用户消息不能为空");
+        // 获取当前登录用户
+        User loginUser = userService.getLoginUser(request);
+        // 调用服务方法获取代码生成流，返回一个 Flux 流式响应对象
+        // contentFlux 会陆续发射 AI 生成的代码文本块（chunk）
+        Flux<String> contentFlux = appService.chatToGenCode(appId, message, loginUser);
+        // 对流式数据进行转换处理
+        return contentFlux
+                // map 操作：将每个原始字符串数据块转换为 SSE 格式的事件对象
+                .map(chunk -> {
+                    // 创建一个 Map 包装器，将原始数据放在 key 为"d"(data) 的字段中
+                    // 例如：如果 chunk 是"public class..."，则 wrapper 变成 {"d": "public class..."}
+                    Map<String, String> wrapper = Map.of("d", chunk);
+
+                    // 将 Map 对象序列化为 JSON 字符串
+                    // 例如：{"d": "public class..."}
+                    String jsonData = JSONUtil.toJsonStr(wrapper);
+
+                    // 构建 SSE 事件对象
+                    return ServerSentEvent.<String>builder()
+                            // 设置事件数据字段（data field），携带 JSON 格式的代码块
+                            .data(jsonData)
+                            // 构建不可变的 ServerSentEvent 对象
+                            .build();
+                })
+                // concatWith 操作：在原始流结束后，拼接一个额外的 Mono 流（只包含一个元素）
+                .concatWith(Mono.just(
+                        // 构建流式传输的结束标记事件
+                        ServerSentEvent.<String>builder()
+                                // 设置事件类型（event type）为"done"，用于通知前端传输完成
+                                .event("done")
+                                // 空数据内容（结束事件不需要数据）
+                                .data("")
+                                // 构建结束事件对象
+                                .build()
+                ));
+
+    }
+
 
     /**
      * 创建应用
@@ -279,5 +357,6 @@ public class AppController {
         // 获取封装类
         return ResultUtils.success(appService.getAppVO(app));
     }
+
 
 }

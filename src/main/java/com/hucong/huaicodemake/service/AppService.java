@@ -1,10 +1,12 @@
 package com.hucong.huaicodemake.service;
 
 import com.hucong.huaicodemake.model.dto.app.AppQueryRequest;
+import com.hucong.huaicodemake.model.entity.User;
 import com.hucong.huaicodemake.model.vo.AppVO;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
 import com.hucong.huaicodemake.model.entity.App;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 
@@ -38,4 +40,20 @@ public interface AppService extends IService<App> {
      * @return 应用信息列表
      */
     List<AppVO> getAppVOList(List<App> appList);
+
+    /**
+     * 获取应用信息列表 脱敏
+     *
+     * @param appId 应用id
+     * @return 应用信息列表
+     */
+    Flux<String> chatToGenCode(Long appId, String message, User loginUser);
+
+    /**
+     * 部署应用
+     *
+     * @param appId 应用id
+     * @return 应用信息列表
+     */
+    String deployApp(Long appId,User loginUser);
 }
