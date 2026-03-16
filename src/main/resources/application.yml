@@ -3,16 +3,28 @@ spring:
     name: hu-ai-code-make-backend
   profiles:
     active: local
+  session:
+    store-type: redis
+    timeout: 2592000
   # mysql
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3307/hu_ai_code_make
     username: root
     password: 1234
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      ttl: 3600
+      password:
 server:
   port: 8124
   servlet:
     context-path: /api
+    session:
+      cookie:
+        max-age: 2592000
 # springdoc-openapi
 springdoc:
   group-configs:

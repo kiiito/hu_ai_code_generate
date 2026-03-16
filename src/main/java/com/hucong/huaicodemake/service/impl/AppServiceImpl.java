@@ -12,9 +12,11 @@ import com.hucong.huaicodemake.exception.ErrorCode;
 import com.hucong.huaicodemake.exception.ThrowUtils;
 import com.hucong.huaicodemake.model.dto.app.AppQueryRequest;
 import com.hucong.huaicodemake.model.entity.User;
+import com.hucong.huaicodemake.model.enums.ChatHistoryMessageTypeEnum;
 import com.hucong.huaicodemake.model.enums.CodeGenTypeEnum;
 import com.hucong.huaicodemake.model.vo.AppVO;
 import com.hucong.huaicodemake.model.vo.UserVO;
+import com.hucong.huaicodemake.service.ChatHistoryService;
 import com.hucong.huaicodemake.service.UserService;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
@@ -22,10 +24,12 @@ import com.hucong.huaicodemake.model.entity.App;
 import com.hucong.huaicodemake.mapper.AppMapper;
 import com.hucong.huaicodemake.service.AppService;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 import java.io.File;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -39,6 +43,7 @@ import java.util.stream.Collectors;
  *
  * @author <a href="https://github.com/kiiito">程序员hucong</a>
  */
+@Slf4j
 @Service
 public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppService {
 
@@ -47,6 +52,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     @Resource
     private AiCodeGeneratorFacade aiCodeGeneratorFacade;
+
+    @Resource
+    private ChatHistoryService chatHistoryService;
 
     /**
      * 获取应用列表 脱敏后的应用信息
@@ -70,8 +78,24 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         String codeGenType = app.getCodeGenType();
         CodeGenTypeEnum codeGenTypeEnum = CodeGenTypeEnum.getEnumByValue(codeGenType);
         ThrowUtils.throwIf(codeGenTypeEnum == null, ErrorCode.SYSTEM_ERROR, "不支持的代码生成类型");
-        // 5 调用ai生成代码
-        return aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
+        // 5 调用ai生成代码之前保存用户发送的信息
+        chatHistoryService.addChatMessage(appId,message, ChatHistoryMessageTypeEnum.USER.getValue(), loginUser.getId());
+        // 6 调用ai生成流式代码
+        Flux<String> contentFlux = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
+        // 7 收集AI响应的内容，并完成后保存到数据库
+        StringBuffer aiResponseBuffer = new StringBuffer();
+       return contentFlux.map(chunk->{
+            //实时AI响应收集内容
+            aiResponseBuffer.append(chunk);
+            return chunk;
+        }).doOnComplete(()->{
+            //流式返回后，保存AI消息到数据库中
+            String aiResponse  = aiResponseBuffer.toString();
+            chatHistoryService.addChatMessage(appId,aiResponse, ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
+        }).doOnError(error->{
+            //如果流式返回错误，也要保存AI失败消息到数据库中
+            chatHistoryService.addChatMessage(appId,error.getMessage(), ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
+        });
     }
 
     @Override
@@ -200,5 +224,24 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         }).collect(Collectors.toList());
     }
 
+    @Override
+    public boolean removeById(Serializable id) {
+        //校验
+        if (id == null){
+            return false;
+        }
+        long appId = Long.parseLong(id.toString());
+        if (appId <= 0){
+            return false;
+        }
+        //先删除关联的对话历史
+        try{
+            chatHistoryService.deleteByAppId(appId);
+        }catch (Exception e){
+            log.error("删除应用关联的对话历史失败：" + e.getMessage());
+        }
+        //删除应用
+        return super.removeById(appId);
+    }
 
 }
