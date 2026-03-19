@@ -7,6 +7,7 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.hucong.huaicodemake.constant.AppConstant;
 import com.hucong.huaicodemake.core.AiCodeGeneratorFacade;
+import com.hucong.huaicodemake.core.handler.StreamHandlerExecutor;
 import com.hucong.huaicodemake.exception.BusinessException;
 import com.hucong.huaicodemake.exception.ErrorCode;
 import com.hucong.huaicodemake.exception.ThrowUtils;
@@ -56,6 +57,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
     @Resource
     private ChatHistoryService chatHistoryService;
 
+    @Resource
+    private StreamHandlerExecutor streamHandlerExecutor;
+
     /**
      * 获取应用列表 脱敏后的应用信息
      *
@@ -83,19 +87,21 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         // 6 调用ai生成流式代码
         Flux<String> contentFlux = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
         // 7 收集AI响应的内容，并完成后保存到数据库
-        StringBuffer aiResponseBuffer = new StringBuffer();
-       return contentFlux.map(chunk->{
-            //实时AI响应收集内容
-            aiResponseBuffer.append(chunk);
-            return chunk;
-        }).doOnComplete(()->{
-            //流式返回后，保存AI消息到数据库中
-            String aiResponse  = aiResponseBuffer.toString();
-            chatHistoryService.addChatMessage(appId,aiResponse, ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
-        }).doOnError(error->{
-            //如果流式返回错误，也要保存AI失败消息到数据库中
-            chatHistoryService.addChatMessage(appId,error.getMessage(), ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
-        });
+//        StringBuffer aiResponseBuffer = new StringBuffer();
+//       return contentFlux.map(chunk->{
+//            //实时AI响应收集内容
+//            aiResponseBuffer.append(chunk);
+//            return chunk;
+//        }).doOnComplete(()->{
+//            //流式返回后，保存AI消息到数据库中
+//            String aiResponse  = aiResponseBuffer.toString();
+//            chatHistoryService.addChatMessage(appId,aiResponse, ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
+//        }).doOnError(error->{
+//            //如果流式返回错误，也要保存AI失败消息到数据库中
+//            chatHistoryService.addChatMessage(appId,error.getMessage(), ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
+//        });
+        // 7 收集AI响应的内容，并完成后保存到数据库
+       return streamHandlerExecutor.doExecute(contentFlux,chatHistoryService,appId,loginUser,codeGenTypeEnum);
     }
 
     @Override
