@@ -224,6 +224,12 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         }).collect(Collectors.toList());
     }
 
+    /**
+     * 删除应用
+     *
+     * @param id 应用id
+     * @return 是否删除成功
+     */
     @Override
     public boolean removeById(Serializable id) {
         //校验
