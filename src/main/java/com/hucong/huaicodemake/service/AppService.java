@@ -18,6 +18,14 @@ import java.util.List;
 public interface AppService extends IService<App> {
 
     /**
+     * 异步生成应用截图
+     *
+     * @param appId        应用id
+     * @param appDeployUrl 应用部署地址
+     */
+    void generateScreenshotAsync(Long appId, String appDeployUrl);
+
+    /**
      * 获取应用信息 脱敏
      *
      * @param app 应用
@@ -55,5 +63,5 @@ public interface AppService extends IService<App> {
      * @param appId 应用id
      * @return 应用信息列表
      */
-    String deployApp(Long appId,User loginUser);
+    String deployApp(Long appId, User loginUser);
 }
