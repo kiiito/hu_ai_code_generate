@@ -2,7 +2,7 @@ package com.hucong.huaicodemake.ai;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.hucong.huaicodemake.ai.tools.FileWriteTool;
+import com.hucong.huaicodemake.ai.tools.*;
 import com.hucong.huaicodemake.exception.BusinessException;
 import com.hucong.huaicodemake.exception.ErrorCode;
 import com.hucong.huaicodemake.model.enums.CodeGenTypeEnum;
@@ -37,6 +37,10 @@ public class AiCodeGeneratorServiceFactory {
 
     @Resource
     private ChatHistoryService chatHistoryService;
+
+    @Resource
+    private ToolManager toolManager;
+
 
     /**
      * AI 服务实例缓存
@@ -100,7 +104,7 @@ public class AiCodeGeneratorServiceFactory {
                     // 用于维护多轮对话的上下文信息
                     .chatMemoryProvider(memoryId -> chatMemory)
                     // 注册文件写入工具，允许 AI 调用该工具将生成的代码保存到文件系统
-                    .tools(new FileWriteTool())
+                    .tools(toolManager.getAllTool())
                     // 配置幻觉工具名称策略：当 AI 错误地调用了不存在的工具时
                     // 返回一个错误提示消息，告知 AI 该工具不存在
                     // toolExecutionRequest 包含工具执行请求的详细信息

@@ -1,5 +1,6 @@
 package com.hucong.huaicodemake.service;
 
+import com.hucong.huaicodemake.model.dto.app.AppAddRequest;
 import com.hucong.huaicodemake.model.dto.app.AppQueryRequest;
 import com.hucong.huaicodemake.model.entity.User;
 import com.hucong.huaicodemake.model.vo.AppVO;
@@ -48,6 +49,8 @@ public interface AppService extends IService<App> {
      * @return 应用信息列表
      */
     List<AppVO> getAppVOList(List<App> appList);
+
+    Long createApp(AppAddRequest appAddRequest, User loginUser);
 
     /**
      * 获取应用信息列表 脱敏
