@@ -2,6 +2,7 @@ package com.hucong.huaicodemake.common;
 
 import com.hucong.huaicodemake.exception.ErrorCode;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 
