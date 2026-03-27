@@ -7,6 +7,7 @@ import com.hucong.huaicodemake.exception.BusinessException;
 import com.hucong.huaicodemake.exception.ErrorCode;
 import com.hucong.huaicodemake.model.enums.CodeGenTypeEnum;
 import com.hucong.huaicodemake.service.ChatHistoryService;
+import com.hucong.huaicodemake.utils.SpringContextUtil;
 import dev.langchain4j.community.store.memory.chat.redis.RedisChatMemoryStore;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
@@ -23,14 +24,9 @@ import java.time.Duration;
 @Configuration
 @Slf4j
 public class AiCodeGeneratorServiceFactory {
-    @Resource
+    @Resource(name = "openAiChatModel")
     private ChatModel chatModel;
 
-    @Resource
-    private StreamingChatModel openAiStreamingChatModel;
-
-    @Resource
-    private StreamingChatModel reasoningStreamingChatModel;
 
     @Resource
     private RedisChatMemoryStore redisChatMemoryStore;
@@ -95,29 +91,37 @@ public class AiCodeGeneratorServiceFactory {
         return switch (codeGenType) {
             // VUE_PROJECT 类型：构建支持 Vue 项目生成的 AI 服务实例
             // 使用推理型流式聊天模型，支持文件写入工具，并处理幻觉工具调用
-            case VUE_PROJECT -> AiServices.builder(AiCodeGeneratorService.class)
-                    // 配置标准聊天模型，用于非流式响应
-                    .chatModel(chatModel)
-                    // 配置推理型流式聊天模型，支持实时输出和深度推理能力
-                    .streamingChatModel(reasoningStreamingChatModel)
-                    // 提供对话记忆管理器，为每个 memoryId 返回对应的 chatMemory 实例
-                    // 用于维护多轮对话的上下文信息
-                    .chatMemoryProvider(memoryId -> chatMemory)
-                    // 注册文件写入工具，允许 AI 调用该工具将生成的代码保存到文件系统
-                    .tools(toolManager.getAllTool())
-                    // 配置幻觉工具名称策略：当 AI 错误地调用了不存在的工具时
-                    // 返回一个错误提示消息，告知 AI 该工具不存在
-                    // toolExecutionRequest 包含工具执行请求的详细信息
-                    .hallucinatedToolNameStrategy(toolExecutionRequest ->
-                            ToolExecutionResultMessage.from(toolExecutionRequest,
-                                    "Error: there is no tool called " + toolExecutionRequest.name()))
-                    // 构建并返回配置完成的 AI 服务实例
-                    .build();
-            case HTML, MULTI_FILE -> AiServices.builder(AiCodeGeneratorService.class)
-                    .chatModel(chatModel)
-                    .streamingChatModel(openAiStreamingChatModel)
-                    .chatMemory(chatMemory)
-                    .build();
+            case VUE_PROJECT -> {
+                //使用多例模式的streamingChatModel解决并发问题
+                StreamingChatModel reasoningStreamingChatModel = SpringContextUtil.getBean("reasoningStreamingChatModelPrototype", StreamingChatModel.class);
+               yield  AiServices.builder(AiCodeGeneratorService.class)
+                        // 配置标准聊天模型，用于非流式响应
+                        .chatModel(chatModel)
+                        // 配置推理型流式聊天模型，支持实时输出和深度推理能力
+                        .streamingChatModel(reasoningStreamingChatModel)
+                        // 提供对话记忆管理器，为每个 memoryId 返回对应的 chatMemory 实例
+                        // 用于维护多轮对话的上下文信息
+                        .chatMemoryProvider(memoryId -> chatMemory)
+                        // 注册文件写入工具，允许 AI 调用该工具将生成的代码保存到文件系统
+                        .tools(toolManager.getAllTool())
+                        // 配置幻觉工具名称策略：当 AI 错误地调用了不存在的工具时
+                        // 返回一个错误提示消息，告知 AI 该工具不存在
+                        // toolExecutionRequest 包含工具执行请求的详细信息
+                        .hallucinatedToolNameStrategy(toolExecutionRequest ->
+                                ToolExecutionResultMessage.from(toolExecutionRequest,
+                                        "Error: there is no tool called " + toolExecutionRequest.name()))
+                        // 构建并返回配置完成的 AI 服务实例
+                        .build();
+            }
+            case HTML, MULTI_FILE -> {
+                //使用多例模式的streamingChatModel解决并发问题
+                StreamingChatModel openAiStreamingChatModel = SpringContextUtil.getBean("streamingChatModelPrototype", StreamingChatModel.class);
+               yield  AiServices.builder(AiCodeGeneratorService.class)
+                        .chatModel(chatModel)
+                        .streamingChatModel(openAiStreamingChatModel)
+                        .chatMemory(chatMemory)
+                        .build();
+            }
             default -> throw new BusinessException(ErrorCode.SYSTEM_ERROR, "不支持的生成类型" + codeGenType.getValue());
         };
     }
