@@ -2,6 +2,7 @@ package com.hucong.huaicodemake.ai;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.hucong.huaicodemake.ai.guardrail.PromptSafetyInputGuardrail;
 import com.hucong.huaicodemake.ai.tools.*;
 import com.hucong.huaicodemake.exception.BusinessException;
 import com.hucong.huaicodemake.exception.ErrorCode;
@@ -110,6 +111,7 @@ public class AiCodeGeneratorServiceFactory {
                         .hallucinatedToolNameStrategy(toolExecutionRequest ->
                                 ToolExecutionResultMessage.from(toolExecutionRequest,
                                         "Error: there is no tool called " + toolExecutionRequest.name()))
+                       .inputGuardrails(new PromptSafetyInputGuardrail())//添加提示词护轨
                         // 构建并返回配置完成的 AI 服务实例
                         .build();
             }
@@ -120,6 +122,7 @@ public class AiCodeGeneratorServiceFactory {
                         .chatModel(chatModel)
                         .streamingChatModel(openAiStreamingChatModel)
                         .chatMemory(chatMemory)
+                       .inputGuardrails(new PromptSafetyInputGuardrail())//添加提示词护轨
                         .build();
             }
             default -> throw new BusinessException(ErrorCode.SYSTEM_ERROR, "不支持的生成类型" + codeGenType.getValue());
