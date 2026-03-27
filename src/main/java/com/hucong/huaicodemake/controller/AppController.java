@@ -18,6 +18,8 @@ import com.hucong.huaicodemake.model.entity.App;
 import com.hucong.huaicodemake.model.entity.User;
 import com.hucong.huaicodemake.model.enums.CodeGenTypeEnum;
 import com.hucong.huaicodemake.model.vo.AppVO;
+import com.hucong.huaicodemake.ratelimter.annotation.RateLimit;
+import com.hucong.huaicodemake.ratelimter.enums.RateLimitType;
 import com.hucong.huaicodemake.service.AppService;
 import com.hucong.huaicodemake.service.ProjectDownloadService;
 import com.hucong.huaicodemake.service.UserService;
@@ -120,6 +122,7 @@ public class AppController {
      * @param request 请求对象
      * @return 生成结果流
      */
+    @RateLimit(limitType = RateLimitType.USER,rate = 5,rateInterval = 60,message = "请求过于频繁，请稍后再试")
     @GetMapping(value = "/chat/gen/code", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId,
                                                        @RequestParam String message,
