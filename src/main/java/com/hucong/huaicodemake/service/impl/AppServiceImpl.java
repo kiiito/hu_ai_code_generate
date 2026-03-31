@@ -21,6 +21,8 @@ import com.hucong.huaicodemake.model.enums.ChatHistoryMessageTypeEnum;
 import com.hucong.huaicodemake.model.enums.CodeGenTypeEnum;
 import com.hucong.huaicodemake.model.vo.AppVO;
 import com.hucong.huaicodemake.model.vo.UserVO;
+import com.hucong.huaicodemake.monitor.MonitorContext;
+import com.hucong.huaicodemake.monitor.MonitorContextHolder;
 import com.hucong.huaicodemake.service.ChatHistoryService;
 import com.hucong.huaicodemake.service.UserService;
 import com.mybatisflex.core.query.QueryWrapper;
@@ -127,7 +129,14 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         ThrowUtils.throwIf(codeGenTypeEnum == null, ErrorCode.SYSTEM_ERROR, "不支持的代码生成类型");
         // 5 调用ai生成代码之前保存用户发送的信息
         chatHistoryService.addChatMessage(appId, message, ChatHistoryMessageTypeEnum.USER.getValue(), loginUser.getId());
-        // 6 调用ai生成流式代码
+        // 6 设置监控上下文（用户ID和应用ID）
+        MonitorContextHolder.setContext(
+                MonitorContext.builder()
+                        .userId(loginUser.getId().toString())
+                        .appId(appId.toString())
+                        .build()
+        );
+        // 7 调用ai生成流式代码
         Flux<String> contentFlux = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
         // 7 收集AI响应的内容，并完成后保存到数据库
 //        StringBuffer aiResponseBuffer = new StringBuffer();
@@ -143,8 +152,12 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 //            //如果流式返回错误，也要保存AI失败消息到数据库中
 //            chatHistoryService.addChatMessage(appId,error.getMessage(), ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
 //        });
-        // 7 收集AI响应的内容，并完成后保存到数据库
-        return streamHandlerExecutor.doExecute(contentFlux, chatHistoryService, appId, loginUser, codeGenTypeEnum);
+        // 8 收集AI响应的内容，并完成后保存到数据库
+        return streamHandlerExecutor.doExecute(contentFlux, chatHistoryService, appId, loginUser, codeGenTypeEnum)
+                .doFinally(signalType -> {
+                    //流结束时清理（无论成功/失败/取消）
+                    MonitorContextHolder.clearContext();
+                });
     }
 
     @Override

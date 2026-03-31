@@ -38,3 +38,11 @@ knife4j:
   setting:
     language: zh_cn
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: always
